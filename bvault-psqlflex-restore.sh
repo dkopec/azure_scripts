@@ -69,11 +69,25 @@ succeeded=false
 
 while [ "$succeeded" != "Succeeded" ]; do
   succeeded=$(az rest --method get --url $RESULT_ASYNC_URL | grep -oP '"status": "\K[^"]+')
-  echo "Restore Job status is: $succeeded"
+  echo "Restore request status is: $succeeded"
   # Check the value of succeeded
   if [ "$succeeded" == "Failed" ] || [ "$succeeded" == "Canceled" ]; then
-    echo "Error: Restore Operation $succeeded"
+    echo "Error: Restore request $succeeded"
     exit 1
   fi
-  sleep 10 # Wait for a 10 seconds before checking again
+  sleep 10 # Wait for a second before checking again
+done
+
+export JOB_URL="https://management.azure.com$(az rest --method get --url $RESULT_ASYNC_URL | grep -oP '"jobId": "\K[^"]+')?api-version=2021-07-01"
+
+job_status=false
+
+while [ "$job_status" != "Completed" ]; do
+  job_status=$(az rest --method get --url $JOB_URL | grep -oP '"status": "\K[^"]+')
+  echo "Restore job status is: $job_status"
+  if [ "$job_status" == "Failed" ] || [ "$job_status" == "Canceled" ] || [ "$job_status" == "SuccessWithWarning" ]; then
+    echo "Error: Restore request $job_status"
+    exit 1
+  fi
+  sleep 10 # Wait for a second before checking again
 done
